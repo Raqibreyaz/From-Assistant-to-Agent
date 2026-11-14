@@ -1,0 +1,6 @@
+1. Every tool calling for loop costs time & token
+2. Chained tool calling can run indefinitely
+3. One wrong answer from a tool can cause other dependent tools give wrong answer
+4. Small models struggle with multi-step planning, can call tools in wrong order
+5. Since LLM is non-deterministic, so it becomes difficult to debug
+6. Prompt injection

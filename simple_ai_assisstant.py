@@ -1,8 +1,11 @@
-from openai import OpenAI
-from dotenv import load_dotenv
-from tools import TOOLS, FUNCTION_NAME_TO_FUNCTION_MAP
 import os
 import json
+
+from openai import OpenAI
+from dotenv import load_dotenv
+
+from tools import TOOLS, run_tool
+from utils.utils import log
 
 load_dotenv()
 
@@ -14,7 +17,11 @@ client = OpenAI(
 messages = [
     {
         "role": "system", 
-        "content": "Act like a very humble agent and respond always under 20 words"
+        "content": 
+            "You are a helpful, humble assistant." 
+            "Answer general questions (programming, science, advice) from your own knowledge."
+            "Use a tool only when the user asks for the current time, weather or their city"
+            "Keep answers under 100 words."
     }
 ]
 
@@ -29,8 +36,7 @@ while True:
 
     messages.append({"role":"user", "content":message})
 
-    for _ in range(MAX_STEPS):
-        print("feeding messages to LLM...")
+    for step in range(MAX_STEPS):
         response = client.chat.completions.create(
             model = os.getenv("MODEL"),
             messages = messages,
@@ -46,17 +52,10 @@ while True:
         tool_calls = msg.tool_calls
         messages.append({'role': msg.role, 'tool_calls': tool_calls})        
 
+        log(f"Step {step+1}: model requested {len(tool_calls)} tool call(s)")
+
         for tool_call in tool_calls:
-            function_name = tool_call.function.name
-            args = json.loads(tool_call.function.arguments)    
-
-            print(f"invoking {function_name}()")
-
-            try:
-                function = FUNCTION_NAME_TO_FUNCTION_MAP[function_name]
-                output = function(**args)
-            except Exception as e:
-                output = f"Error while running {function_name}: {e}"
+            output = run_tool(tool_call=tool_call)
             
             messages.append({
                 "role": "tool",

@@ -1,4 +1,6 @@
 from datetime import datetime
+from utils.utils import log
+import json
 import requests
 
 def get_current_time():
@@ -6,11 +8,26 @@ def get_current_time():
 
 def get_city_weather(city: str | None = None):
     res = requests.get(f"https://wttr.in/{city if city else ""}?format=%C+%t+%w")
+    res.raise_for_status()
     return res.text.strip()
 
 def get_user_city():
     return "Varanasi"
 
+def run_tool(tool_call):
+    func_name = tool_call.function.name
+    
+    try:
+        args = json.loads(tool_call.function.arguments)
+        log(f"🔧 {func_name}({args})")
+        function = FUNCTION_NAME_TO_FUNCTION_MAP[func_name]
+        output = function(**args)
+    except Exception as e:
+        output = f"Error while running {func_name}: {e}"
+    
+    log(f"  ➡️ {output}")
+    return output
+    
 TOOLS = [
     {
         "type": "function",
