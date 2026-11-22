@@ -37,20 +37,30 @@ while True:
     messages.append({"role":"user", "content":message})
 
     for step in range(MAX_STEPS):
-        response = client.chat.completions.create(
+        stream = client.chat.completions.create(
             model = os.getenv("MODEL"),
             messages = messages,
-            tools=TOOLS
+            tools=TOOLS,
+            stream=True
         )
 
-        msg = response.choices[0].message    
-        if msg.content:
-            messages.append({"role": msg.role, "content": msg.content})
-            print(f"{msg.role}: {msg.content}")
+        content = ""
+        tool_calls = []
+        
+        for chunk in stream:
+            piece = chunk.choices[0].delta
+
+            if piece.tool_calls:
+                tool_calls.append(piece.tool_calls[0])
+            if piece.content: 
+                content += piece.content
+                print(piece.content, end = "", flush=True)
+            
+        if content:
+            messages.append({"role": "assistant", "content": content})
             break
         
-        tool_calls = msg.tool_calls
-        messages.append({'role': msg.role, 'tool_calls': tool_calls})        
+        messages.append({'role': "assistant", 'tool_calls': tool_calls})        
 
         log(f"Step {step+1}: model requested {len(tool_calls)} tool call(s)")
 
